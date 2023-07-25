@@ -104,18 +104,6 @@ Index(
     unique=True,
 )
 
-
-class Artifacts(Base):
-    __tablename__ = "artifacts"
-    name = Column(String, primary_key=True, index=True)
-    package_name = Column(String, ForeignKey("packages.name"))
-    platform = Column(String, primary_key=True)
-
-    # relational_id = Column(Integer, ForeignKey("relations_map_file_paths.id"))
-    def __repr__(self):
-        return f"<Artifact(name={self.name}, platform={self.platform}, version={self.version})>"
-
-
 # Example:
 #  "files": [
 #   "lib/python3.9/site-packages/astroid-2.9.3.dist-info/INSTALLER",
@@ -127,42 +115,31 @@ class Artifacts(Base):
 #   "lib/python3.9/site-packages/astroid-2.9.3.dist-info/direct_url.json",
 
 
-class ArtifactsFilePathsNoArch(Base):
-    __tablename__ = "artifacts_file_paths_noarch"
-    id = Column(Integer, primary_key=True)
-    artifact = Column(String, ForeignKey("artifacts.name"))
-    parent_dir = Column(String)
+class Artifacts(Base):
+    __tablename__ = "artifacts"
+    name = Column(String, primary_key=True, index=True)
+    platform = Column(String)
+    build = Column(String)
+    package_name = Column(String, ForeignKey("packages.name"))
+    version = Column(String)
+
+    # relational_id = Column(Integer, ForeignKey("relations_map_file_paths.id"))
+    def __repr__(self):
+        return f"<Artifact(name={self.name})>"
+
+
+class ArtifactsFilePaths(Base):
+    __tablename__ = "artifacts_file_paths"
+    id = Column(UUID, primary_key=True)
+    package_name = Column(String, ForeignKey("packages.name"))
     path = Column(String)
 
 
-class ArtifactsFilePathsLinux(Base):
-    __tablename__ = "artifacts_file_paths_linux"
+class RelationsMapFilePaths(Base):
+    __tablename__ = "relations_map_file_paths"
     id = Column(Integer, primary_key=True)
-    artifact = Column(String, ForeignKey("artifacts.name"))
-    parent_dir = Column(String)
-    path = Column(String)
-
-
-class ArtifactsFilePathsWin(Base):
-    __tablename__ = "artifacts_file_paths_win"
-    id = Column(Integer, primary_key=True)
-    artifact = Column(String, ForeignKey("artifacts.name"))
-    parent_dir = Column(String)
-    path = Column(String)
-
-
-class ArtifactsFilePathsMac(Base):
-    __tablename__ = "artifacts_file_paths_mac"
-    id = Column(Integer, primary_key=True)
-    artifact = Column(String, ForeignKey("artifacts.name"))
-    parent_dir = Column(String)
-    path = Column(String)
-
-
-# class RelationsMapFilePaths(Base):
-#     __tablename__ = "relations_map_file_paths"
-#     id = Column(Integer, primary_key=True)
-#     file_path = Column(String, ForeignKey("artifacts_file_paths.id"))
+    file_path_id = Column(String, ForeignKey("artifacts_file_paths.id"))
+    artifact_name = Column(String, ForeignKey("artifacts.name"))
 
 
 if __name__ == "__main__":

@@ -1,9 +1,10 @@
 import concurrent.futures
+from concurrent.futures import ThreadPoolExecutor
 import glob
 import hashlib
 import json
 from pathlib import Path
-from typing import List
+from typing import List, Callable
 
 from cfdb.log import logger
 
@@ -85,7 +86,9 @@ def retrieve_import_maps_from_output_blob(file: Path):
     return packages_to_imports
 
 
-def traverse_files(path: Path, output_dir: Path = None) -> List[Path]:
+def traverse_files(
+    path: Path, output_dir: Path = None, process_function: Callable = process_batch
+) -> List[Path]:
     """
     Traverses a directory of JSON files, generating a list of dictionaries
     with file paths and hashes. These dictionaries are written to an output directory.
@@ -119,14 +122,14 @@ def traverse_files(path: Path, output_dir: Path = None) -> List[Path]:
 
     stored_files = []
 
-    with concurrent.futures.ThreadPoolExecutor() as executor:
+    with ThreadPoolExecutor() as executor:
         for i in range(num_of_batches):
             tmp_file = output_dir / f"batch_{i}.json"
             logger.debug(f"Creating temporary file {tmp_file}...")
             batch_files = files[i * 1000 : (i + 1) * 1000]
             batch_files.reverse()
 
-            executor.submit(process_batch, batch_files, tmp_file)
+            executor.submit(process_function, batch_files, tmp_file)
 
             stored_files.append(tmp_file)
 
