@@ -10,7 +10,13 @@ from cfdb.populate.utils import (
 )
 from typing import List
 from cfdb.log import logger, progressBar
-from cfdb.models.schema import Artifacts, Packages, ArtifactsFilePaths
+from cfdb.models.schema import (
+    Artifacts,
+    Packages,
+    ArtifactsFilePaths,
+    uniq_id,
+    RelationsMapFilePaths,
+)
 
 
 def _compare_files(artifacts, stored_files_index, root_dir):
@@ -136,32 +142,40 @@ def sort_tuples_by_package(tuples_list):
 def update_filepaths_table(
     session: Session, artifact: Artifacts, filepath: Path, root_dir: Path
 ):
-    # retrieve associated filepaths already stored in the database
-
-    filepaths = (
-        session.query(ArtifactsFilePaths)
-        .filter_by(package_name=artifact.package_name)
-        .all()
-    )
-
+    # Retrieve associated filepaths already stored in the database
     with open(root_dir / filepath, "r") as f:
-        artifact_contents = json.loads(f.read())
+        artifact_contents = json.load(f)
 
-    # retrieve associated path list
+    # Retrieve associated path list
     files = artifact_contents.get("files", [])
 
     if files:
-        # check if the filepaths are already stored in the database
         for file in files:
-            # check if the filepath is already stored in the database
-            if file not in filepaths:
-                # create a new ArtifactsFilePaths object
-                new_filepath = ArtifactsFilePaths(
-                    package_name=artifact.package_name,
+            # Check if the file path is already stored in the database
+            db_filepath = (
+                session.query(ArtifactsFilePaths)
+                .filter(ArtifactsFilePaths.path == file)
+                .first()
+            )
+
+            if db_filepath is not None:
+                logger.warning(f"Duplicated filepath found: {file}")
+                return session
+
+            if db_filepath is None:
+                # Create a new ArtifactsFilePaths object
+                db_filepath = ArtifactsFilePaths(
+                    id=uniq_id(),
                     path=file,
                 )
-                session.add(new_filepath)
-        session.commit()
+                session.add(db_filepath)
+
+                # Create a new relation between the artifact and the filepath
+                relational_mapping = RelationsMapFilePaths(
+                    file_path_id=db_filepath.id,
+                    artifact_name=artifact.name,
+                )
+                session.add(relational_mapping)
 
     return session
 
@@ -233,13 +247,21 @@ def update(session: Session, path: Path):
 
                 # Create a new artifact record -- artifacts will always be created, never updated
 
-                artifact = Artifacts(
-                    name=f"{platform}/{artifact_name}",
-                    package_name=package.name,
-                    platform=platform,
-                    version=version,
-                    build=build_number,
+                # Check if the artifact already exists -- should only happen if the execution is interrupted
+                artifact = (
+                    session.query(Artifacts)
+                    .filter(Artifacts.name == f"{platform}/{artifact_name}")
+                    .first()
                 )
+
+                if not artifact:
+                    artifact = Artifacts(
+                        name=f"{platform}/{artifact_name}",
+                        package_name=package.name,
+                        platform=platform,
+                        version=version,
+                        build=build_number,
+                    )
 
                 # Add the new artifact to the session
                 session.add(artifact)

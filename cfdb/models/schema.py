@@ -1,6 +1,15 @@
 import uuid
 
-from sqlalchemy import Column, ForeignKey, Index, Integer, LargeBinary, String, Table
+from sqlalchemy import (
+    Column,
+    ForeignKey,
+    Index,
+    Integer,
+    LargeBinary,
+    String,
+    Table,
+    FetchedValue,
+)
 from sqlalchemy.ext.declarative import declarative_base
 
 try:
@@ -131,13 +140,12 @@ class Artifacts(Base):
 class ArtifactsFilePaths(Base):
     __tablename__ = "artifacts_file_paths"
     id = Column(UUID, primary_key=True)
-    package_name = Column(String, ForeignKey("packages.name"))
     path = Column(String)
 
 
 class RelationsMapFilePaths(Base):
     __tablename__ = "relations_map_file_paths"
-    id = Column(Integer, primary_key=True)
+    id = Column(Integer, FetchedValue(), primary_key=True, index=True)
     file_path_id = Column(String, ForeignKey("artifacts_file_paths.id"))
     artifact_name = Column(String, ForeignKey("artifacts.name"))
 
