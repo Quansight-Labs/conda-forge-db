@@ -4,6 +4,7 @@ from typer.core import TyperGroup
 
 from cfdb.handler import CFDBHandler
 from cfdb.log import logger
+from cfdb.harvest.core import reap as harvest_packages_and_artifacts
 
 
 class OrderCommands(TyperGroup):
@@ -71,6 +72,18 @@ def update_artifacts(
     """
     db_handler = CFDBHandler("sqlite:///cf-database.db")
     db_handler.update_artifacts(path)
+
+
+@app.command()
+def harvest_packages_and_artifacts(
+    path: str = typer.Option(
+        ..., "--path", "-p", help="Path to the artifacts directory or Database URL."
+    )
+):
+    """
+    Harvest the packages and artifacts from the artifacts directory.
+    """
+    harvest_packages_and_artifacts(path)
 
 
 if __name__ == "__main__":

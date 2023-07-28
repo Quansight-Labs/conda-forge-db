@@ -52,7 +52,13 @@ jobs:
       uses: actions/download-artifact@v2
       with:
         name: cfdb
-        path: ${{ github.workspace }}/cf-database.db
+        path: ${{ github.workspace }}/cf-database.db.tar.zstd
+
+    # Add an extra step to decompress the tar file back to the original location
+    - name: Decompress DB file
+      run: |
+        tar --zstd -xf ${{ github.workspace }}/cf-database.db.tar.zstd -C ${{ github.workspace }}
+        echo "Decompressed DB file" $(du -sh ${{ github.workspace }}/cf-database.db)
 
     - name: Create runtest directory
       if: always()
@@ -60,7 +66,27 @@ jobs:
         mkdir database
         cd database
 
-    - name: Populate table
+    - name: Harvest Artifacts
+      if: always()
+      run: |
+        cd ..
+        echo $(pwd)
+        echo "Harvest Artifacts from upstream"
+        export CFDB_ARTIFACTS_PATH=$(pwd)/harvested_artifacts
+        cfdb harvest_packages_and_artifacts --path ${{ github.workspace }}/cf-database.db
+        du -sh $CFDB_ARTIFACTS_PATH
+        ls -lat
+
+    - name: Populate artifact and files tables
+      if: always()
+      run: |
+        cd ..
+        echo $(pwd)
+        echo "Populate artifact and files tables"
+        cfdb update-artifacts --path $CFDB_ARTIFACTS_PATH
+        du -sh ${{ github.workspace }}/cf-database.db
+
+    - name: Populate table of feedstock outputs and import to package maps
       if: always()
       run: |
         cd ..
@@ -69,11 +95,19 @@ jobs:
         cfdb update-feedstock-outputs -p ${{ github.workspace }}/feedstock-outputs
         echo "Update import Packages to maps"
         cfdb update-import-to-package-maps --path ${{ github.workspace }}/libcfgraph/import_to_pkg_maps
+        du -sh ${{ github.workspace }}/cf-database.db
         ls -lat
+
+
+    # Add the compression step using tar and Zstd
+    - name: Compress DB file
+      run: |
+        ZSTD_NBTHREADS=4 ZSTD_CLEVEL=19 tar --zstd -cf ${{ github.workspace }}/cf-database.db.tar.zstd ${{ github.workspace }}/cf-database.db
+        echo "Compressed DB file" $(du -sh ${{ github.workspace }}/cf-database.db.tar.zstd)
 
     - name: 'Upload Artifact'
       if: always()
       uses: actions/upload-artifact@v2
       with:
         name: cfdb
-        path: ${{ github.workspace }}/cf-database.db
+        path: ${{ github.workspace }}/cf-database.db.tar.zstd
