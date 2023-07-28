@@ -4,7 +4,7 @@ from typer.core import TyperGroup
 
 from cfdb.handler import CFDBHandler
 from cfdb.log import logger
-from cfdb.harvest.core import reap as harvest_packages_and_artifacts
+from cfdb.harvest.core import reap as reap_artifacts
 
 
 class OrderCommands(TyperGroup):
@@ -37,7 +37,7 @@ def update_feedstock_outputs(
         To update the feedstock outputs, use the following command:
         $ cfdb update_feedstock_outputs --path /path/to/feedstock-outputs/outputs
     """
-    db_handler = CFDBHandler("sqlite:///cf-database.db")
+    db_handler = CFDBHandler()
     db_handler.update_feedstock_outputs(path)
 
 
@@ -57,7 +57,7 @@ def update_import_to_package_maps(
         To update the import to package maps, use the following command:
         $ cfdb update_import_to_package_maps --path /path/to/libcfgraph/import_to_package_maps
     """
-    db_handler = CFDBHandler("sqlite:///cf-database.db")
+    db_handler = CFDBHandler()
     db_handler.update_import_to_package_maps(path)
 
 
@@ -70,7 +70,7 @@ def update_artifacts(
     """
     Update the artifacts in the database.
     """
-    db_handler = CFDBHandler("sqlite:///cf-database.db")
+    db_handler = CFDBHandler()
     db_handler.update_artifacts(path)
 
 
@@ -83,7 +83,7 @@ def harvest_packages_and_artifacts(
     """
     Harvest the packages and artifacts from the artifacts directory.
     """
-    harvest_packages_and_artifacts(path)
+    reap_artifacts(path)
 
 
 if __name__ == "__main__":

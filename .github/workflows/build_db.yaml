@@ -2,6 +2,10 @@ name: Create & Update DB
 
 on: [pull_request, workflow_dispatch]
 
+env:
+  CFDB_ARTIFACTS_PATH: ${{ github.workspace }}/harvested_artifacts
+  CFDB_DB_PATH: ${{ github.workspace }}/cf-database.db
+
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
@@ -49,42 +53,26 @@ jobs:
         pip install -e .
 
     - name: Retrieve previous DB table from artifacts
-      uses: actions/download-artifact@v2
+      uses: actions/download-artifact@v3
+      id: download
       with:
         name: cfdb
-        path: ${{ github.workspace }}/cf-database.db.tar.zstd
+        path: ${{ github.workspace }}
 
     # Add an extra step to decompress the tar file back to the original location
     - name: Decompress DB file
       run: |
-        tar --zstd -xf ${{ github.workspace }}/cf-database.db.tar.zstd -C ${{ github.workspace }}
+        tar -xf ${{ steps.download.outputs.download-path }} -C ${{ github.workspace }}
+        echo "Move DB file to workspace" $(pwd)
+        mv ${{ github.workspace }}/${{ github.workspace }}/cf-database.db $CFDB_DB_PATH
         echo "Decompressed DB file" $(du -sh ${{ github.workspace }}/cf-database.db)
 
-    - name: Create runtest directory
+    - name: Test cfdb
       if: always()
       run: |
-        mkdir database
-        cd database
-
-    - name: Harvest Artifacts
-      if: always()
-      run: |
-        cd ..
-        echo $(pwd)
-        echo "Harvest Artifacts from upstream"
-        export CFDB_ARTIFACTS_PATH=$(pwd)/harvested_artifacts
-        cfdb harvest_packages_and_artifacts --path ${{ github.workspace }}/cf-database.db
-        du -sh $CFDB_ARTIFACTS_PATH
-        ls -lat
-
-    - name: Populate artifact and files tables
-      if: always()
-      run: |
-        cd ..
-        echo $(pwd)
-        echo "Populate artifact and files tables"
-        cfdb update-artifacts --path $CFDB_ARTIFACTS_PATH
-        du -sh ${{ github.workspace }}/cf-database.db
+          echo "Test cfdb installation :::::" $(pwd)
+          cfdb --help
+          ls -lat .
 
     - name: Populate table of feedstock outputs and import to package maps
       if: always()
@@ -95,19 +83,40 @@ jobs:
         cfdb update-feedstock-outputs -p ${{ github.workspace }}/feedstock-outputs
         echo "Update import Packages to maps"
         cfdb update-import-to-package-maps --path ${{ github.workspace }}/libcfgraph/import_to_pkg_maps
-        du -sh ${{ github.workspace }}/cf-database.db
+        du -sh $CFDB_DB_PATH
         ls -lat
+
+    - name: Harvest Artifacts
+      if: always()
+      run: |
+        cd ..
+        echo $(pwd)
+        echo "Harvest Artifacts from upstream"
+        cfdb harvest-packages-and-artifacts --path $CFDB_DB_PATH
+        du -sh $CFDB_ARTIFACTS_PATH
+        ls -lat
+
+
+    - name: Populate artifact and files tables
+      if: always()
+      run: |
+        cd ..
+        echo $(pwd)
+        echo "Populate artifact and files tables"
+        cfdb update-artifacts --path $CFDB_ARTIFACTS_PATH
+        du -sh $CFDB_DB_PATH
 
 
     # Add the compression step using tar and Zstd
     - name: Compress DB file
+      if: always()
       run: |
-        ZSTD_NBTHREADS=4 ZSTD_CLEVEL=19 tar --zstd -cf ${{ github.workspace }}/cf-database.db.tar.zstd ${{ github.workspace }}/cf-database.db
+        ZSTD_NBTHREADS=4 ZSTD_CLEVEL=19 tar --zstd -cf ${{ github.workspace }}/cf-database.db.tar.zstd $CFDB_DB_PATH
         echo "Compressed DB file" $(du -sh ${{ github.workspace }}/cf-database.db.tar.zstd)
 
     - name: 'Upload Artifact'
       if: always()
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       with:
         name: cfdb
         path: ${{ github.workspace }}/cf-database.db.tar.zstd
