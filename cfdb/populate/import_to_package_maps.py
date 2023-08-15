@@ -14,7 +14,7 @@ logger = getLogger(__name__)
 def _decompose_filename(filename_handle: str):
     try:
         package_name, partition = filename_handle.split(".")
-    except ValueError as e:
+    except ValueError:
         # We assume that typeerror will only happen when filename
         # is likely name.. (with the extra dot)
         package_name = filename_handle

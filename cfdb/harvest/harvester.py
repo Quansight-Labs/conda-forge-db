@@ -3,10 +3,8 @@
 Harvests metadata out of a built conda package
 """
 
-import io
 import json
 import os
-import sys
 import tarfile
 
 from ruamel.yaml.scanner import ScannerError
