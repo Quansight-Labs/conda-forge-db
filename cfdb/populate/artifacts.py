@@ -1,5 +1,5 @@
 from pathlib import Path
-from tempfile import TemporaryDirectory
+from tempfile import mkdtemp
 import json
 import logging
 
@@ -20,8 +20,13 @@ from cfdb.models.schema import (
 
 logger = logging.getLogger(__name__)
 
+
 def _compare_files(artifacts, stored_files_index, root_dir):
-    """Retrieve filestem from path to identify the package name and compare with the database. Also, loads the file using json to retrieve the metadata about the version and build."""
+    """
+    Retrieve filestem from path to identify the package name and 
+    compare with the database. Also, loads the file using json to 
+    retrieve the metadata about the version and build.
+    """
 
     db_files = set()
     stored_files_set = set()
@@ -144,7 +149,7 @@ def update_filepaths_table(
     session: Session, artifact: Artifacts, filepath: Path, root_dir: Path
 ):
     # Retrieve associated filepaths already stored in the database
-    with open(root_dir / filepath, "r") as f:
+    with open(filepath, "r") as f:
         artifact_contents = json.load(f)
 
     # Retrieve associated path list
@@ -205,8 +210,7 @@ def update(session: Session, path: Path):
         session (Session): The database session.
         path (Path): The path to the directory containing the JSON files. From "harvesting".
     """
-    _tmp_dir = TemporaryDirectory()
-    tmp_dir = Path(_tmp_dir.name)
+    tmp_dir = Path(mkdtemp(suffix="_cfdb"))
     logger.info(
         "Querying database for Recent Artifacts..."
     )  # query artifacts whose last_update was under the cron range -- hum, need to think more about this...
@@ -219,7 +223,8 @@ def update(session: Session, path: Path):
     ).all()
 
     logger.info(f"Traversing files in {path}...")
-    # detect number of JSON blobs locally available, and store related paths/hashes into batched index files named stored_files (list)
+    # detect number of JSON blobs locally available, 
+    # and store related paths/hashes into batched index files named stored_files (list)
     stored_files = traverse_files(
         path, tmp_dir, process_function=_process_artifact_batches
     )

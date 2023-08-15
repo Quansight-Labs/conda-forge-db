@@ -1,4 +1,4 @@
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import ThreadPoolExecutor, wait
 import glob
 import hashlib
 import json
@@ -107,7 +107,13 @@ def traverse_files(
     if not path.is_dir():
         raise NotADirectoryError(f"{path} is not a directory.")
 
-    files = list(glob.iglob(f"{path}/**/*.json", recursive=True))
+    files = []
+    for f in path.glob("**/*.json"):
+        if f.is_file():
+            files.append(f)
+
+    if not files:
+        raise FileNotFoundError(f"No JSON files found in {path}")
 
     num_of_files = len(files)
     num_of_batches = num_of_files // 1000
@@ -123,16 +129,19 @@ def traverse_files(
     stored_files = []
 
     with ThreadPoolExecutor() as executor:
+        futures = []
         for i in range(num_of_batches):
             tmp_file = output_dir / f"batch_{i}.json"
             logger.debug(f"Creating temporary file {tmp_file}...")
             batch_files = files[i * 1000 : (i + 1) * 1000]
             batch_files.reverse()
 
-            executor.submit(process_function, batch_files, tmp_file)
+            fut = executor.submit(process_function, batch_files, tmp_file)
+            futures.append(fut)
 
             stored_files.append(tmp_file)
-
-    del files
+        wait(futures)
+        for fut in futures:
+            fut.result()
 
     return stored_files
