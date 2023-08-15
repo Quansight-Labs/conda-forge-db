@@ -1,15 +1,15 @@
 from pathlib import Path
 from tempfile import TemporaryDirectory
 import json
+import logging
 
-from sqlalchemy.orm import Session, load_only
+from sqlalchemy.orm import Session
 
 from cfdb.populate.utils import (
     traverse_files,
-    retrieve_associated_feedstock_from_output_blob,
 )
 from typing import List
-from cfdb.log import logger, progressBar
+from cfdb.log import progressBar
 from cfdb.models.schema import (
     Artifacts,
     Packages,
@@ -18,6 +18,7 @@ from cfdb.models.schema import (
     RelationsMapFilePaths,
 )
 
+logger = logging.getLogger(__name__)
 
 def _compare_files(artifacts, stored_files_index, root_dir):
     """Retrieve filestem from path to identify the package name and compare with the database. Also, loads the file using json to retrieve the metadata about the version and build."""
@@ -231,6 +232,7 @@ def update(session: Session, path: Path):
         logger.info("No changes detected. Exiting...")
         return
 
+    logger.info("Preparing update...")
     sorted_changed_files = sort_tuples_by_package(changed_files)
     del changed_files
 

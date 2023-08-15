@@ -2,11 +2,13 @@ import bz2
 import io
 import json
 from collections import defaultdict
+from logging import getLogger
 from typing import Dict
 
 import requests
 import requests_cache
-from cfdb.log import logger
+
+logger = getLogger(__name__)
 
 channel_list = [
     "https://conda.anaconda.org/conda-forge/linux-64",

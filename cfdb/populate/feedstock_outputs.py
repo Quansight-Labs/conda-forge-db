@@ -1,15 +1,18 @@
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from typing import List, Set, Tuple
+from logging import getLogger
 
 from sqlalchemy.orm import Session
 
-from cfdb.log import logger, progressBar
+from cfdb.log import progressBar
 from cfdb.models.schema import FeedstockOutputs, Feedstocks, Packages, uniq_id
 from cfdb.populate.utils import (
     retrieve_associated_feedstock_from_output_blob,
     traverse_files,
 )
+
+logger = getLogger(__name__)
 
 
 def _compare_files(

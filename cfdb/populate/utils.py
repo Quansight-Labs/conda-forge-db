@@ -1,4 +1,3 @@
-import concurrent.futures
 from concurrent.futures import ThreadPoolExecutor
 import glob
 import hashlib
@@ -6,7 +5,8 @@ import json
 from pathlib import Path
 from typing import List, Callable
 
-from cfdb.log import logger
+from logging import getLogger
+logger = getLogger(__name__)
 
 
 def hash_file(filename: str) -> str:

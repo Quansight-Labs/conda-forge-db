@@ -1,6 +1,6 @@
 from pathlib import Path
 import pytest
-from cfdb.populate.feedstock_outputs import traverse_files, _compare_files
+from cfdb.populate.feedstock_outputs import traverse_files
 from cfdb.populate.utils import hash_file
 
 

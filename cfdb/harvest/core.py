@@ -5,6 +5,7 @@ import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 from time import localtime, strftime
+from logging import getLogger
 
 import requests
 
@@ -12,8 +13,9 @@ from cfdb.harvest.harvester import harvest, harvest_dot_conda
 from cfdb.harvest.local import fetch_db, fetch_jsonblobs
 from cfdb.harvest.upstream import fetch as upstream_fetch
 from cfdb.harvest.utils import expand_file_and_mkdirs
-from cfdb.log import logger, progressBar
+from cfdb.log import progressBar
 
+logger = getLogger(__name__)
 
 def diff(path):
     missing_files = set()

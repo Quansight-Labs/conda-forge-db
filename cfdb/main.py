@@ -3,8 +3,8 @@ from click import Context
 from typer.core import TyperGroup
 
 from cfdb.handler import CFDBHandler
-from cfdb.log import logger
 from cfdb.harvest.core import reap as reap_artifacts
+from cfdb.log import initialize_logging
 
 
 class OrderCommands(TyperGroup):
@@ -86,5 +86,10 @@ def harvest_packages_and_artifacts(
     reap_artifacts(path)
 
 
-if __name__ == "__main__":
+def _main():
+    initialize_logging()
     app()
+
+
+if __name__ == "__main__":
+    _main()
