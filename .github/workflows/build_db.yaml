@@ -40,7 +40,7 @@ jobs:
         ls -lat ${{ github.workspace }}/libcfgraph
 
     - name: Build environment
-      uses: cfdb/.github/actions/build-conda-env
+      uses: ./cfdb/.github/actions/build-conda-env
       with:
         env_file: environment.yaml
 
