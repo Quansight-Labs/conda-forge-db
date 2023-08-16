@@ -17,6 +17,13 @@ runs:
   using: composite
 
   steps:
+    - name: Get environment name from file
+      id: environment
+      run: |
+        echo "Getting environment name from file"
+        echo "environment-name=$(grep name ${{ inputs.env_file }} | awk '{ print $2}' )" >> $GITHUB_OUTPUT
+      shell: bash
+
     - name: Setup Mambaforge
       uses: conda-incubator/setup-miniconda@v2
       with:
