@@ -17,13 +17,6 @@ runs:
   using: composite
 
   steps:
-    - name: Get environment name from file
-      id: environment
-      run: |
-        echo "Getting environment name from file"
-        echo "environment-name=$(grep name ${{ inputs.env_file }} | awk '{ print $2}' )" >> $GITHUB_OUTPUT
-      shell: bash
-
     - name: Setup Mambaforge
       uses: conda-incubator/setup-miniconda@v2
       with:
@@ -49,16 +42,11 @@ runs:
       run: conda info
       shell: bash -l {0}
 
-    - name: Update environment (hash changed)
-      run: mamba env update --file ${{ inputs.env_file }} -n ${{ steps.environment.outputs.environment-name }}
+    - name: Update environment (only if hash changed)
+      run: mamba env update --file ${{ inputs.env_file }}
       shell: bash -l {0}
       if: steps.cache.outputs.cache-hit != 'true'
 
-    - name: Skip environment update (hash unchanged)
-      run: echo "Environment hash unchanged, skipping update"
-      shell: bash -l {0}
-      if: steps.cache.outputs.cache-hit == 'true'
-
     - name: Show environment dependencies
-      run: conda list -n ${{ steps.environment.outputs.environment-name }}
+      run: conda list
       shell: bash -l {0}
