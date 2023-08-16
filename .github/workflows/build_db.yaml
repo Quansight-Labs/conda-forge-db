@@ -52,6 +52,8 @@ jobs:
       uses: actions/download-artifact@v3
       id: download
       continue-on-error: true
+      with:
+        name: cfdb
 
     # Add an extra step to decompress the tar file back to the original location
     - name: Decompress DB file
