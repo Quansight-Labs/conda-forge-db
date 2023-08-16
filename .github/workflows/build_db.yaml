@@ -42,7 +42,7 @@ jobs:
     - name: Build environment
       uses: ./cfdb/.github/actions/build-conda-env
       with:
-        env_file: environment.yaml
+        env_file: ${{ github.workspace }}/cfdb/environment.yaml
 
     - name: Install cfdb
       run: |
