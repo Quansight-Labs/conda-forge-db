@@ -152,10 +152,8 @@ def reap(comparing_source_path, known_bad_packages=(), max_workers=20):
             ):
                 try:
                     f.result()
-                except ReapFailure as e:
-                    logger.warning(f"FAILURE {e.args}")
-                except Exception:
-                    pass
+                except Exception as e:
+                    logger.exception(e)
 
 
 if __name__ == "__main__":
