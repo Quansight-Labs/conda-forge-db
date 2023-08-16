@@ -110,17 +110,17 @@ def _process_artifact_batches(batch_files: List[Path], tmp_file: Path):
         f.writelines(processed_data)
 
 
-def sort_tuples_by_package(tuples_list):
+def group_tuples_by_package(tuples_list):
     """
-    Sort a list of tuples by the package_name and create a dictionary.
+    Group a list of tuples by the package_name and create a dictionary.
 
     This function takes a list of tuples in the format `(path, package_name, platform, version, build)`
-    and sorts the tuples into a dictionary where each key is the `package_name`, and the values are
+    and groups the tuples into a dictionary where each key is the `package_name`, and the values are
     lists of tuples containing the corresponding `path`, `platform`, `version`, and `build` values.
 
     Parameters:
         tuples_list (List[Tuple]): A list of tuples in the format (path, package_name, platform, version, build),
-                                   representing the artifacts to be sorted.
+                                   representing the artifacts to be grouped.
 
     Returns:
         dict: A dictionary where each key is the `package_name`, and the values are lists of tuples
@@ -130,19 +130,19 @@ def sort_tuples_by_package(tuples_list):
         The function assumes that the input `tuples_list` contains valid tuples, and the elements
         within each tuple are in the expected order: (path, package_name, platform, version, build).
     """
-    sorted_dict = {}
+    groups = {}
 
     for path, package_name, platform, version, build in tuples_list:
         # Create a tuple without the package_name
         remaining_tuple = (path, platform, version, build)
 
         # Check if the package_name is already a key in the dictionary
-        if package_name in sorted_dict:
-            sorted_dict[package_name].append(remaining_tuple)
+        if package_name in groups:
+            groups[package_name].append(remaining_tuple)
         else:
-            sorted_dict[package_name] = [remaining_tuple]
+            groups[package_name] = [remaining_tuple]
 
-    return sorted_dict
+    return groups
 
 
 def update_filepaths_table(
@@ -238,7 +238,7 @@ def update(session: Session, path: Path):
         return
 
     logger.info("Preparing update...")
-    sorted_changed_files = sort_tuples_by_package(changed_files)
+    sorted_changed_files = group_tuples_by_package(changed_files)
     del changed_files
 
     # Fetch all existing packages in one query

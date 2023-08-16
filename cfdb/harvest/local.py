@@ -16,7 +16,7 @@ def query_existing_artifacts(db_path):
     return artifacts
 
 
-def _sort_existing_artifacts_by_package_name(artifacts):
+def _group_existing_artifacts_by_package_name(artifacts):
     artifacts_by_package_name = defaultdict(list)
     for artifact in artifacts:
         artifacts_by_package_name[artifact.package_name].append(artifact.name)
@@ -26,7 +26,7 @@ def _sort_existing_artifacts_by_package_name(artifacts):
 
 def fetch_db(db_path):
     artifacts = query_existing_artifacts(db_path)
-    artifacts_by_package_name = _sort_existing_artifacts_by_package_name(artifacts)
+    artifacts_by_package_name = _group_existing_artifacts_by_package_name(artifacts)
     return artifacts_by_package_name
 
 
