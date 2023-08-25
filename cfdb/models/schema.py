@@ -1,6 +1,15 @@
 import uuid
 
-from sqlalchemy import Column, ForeignKey, Index, Integer, LargeBinary, String, Table
+from sqlalchemy import (
+    Column,
+    ForeignKey,
+    Index,
+    Integer,
+    LargeBinary,
+    String,
+    Table,
+    FetchedValue,
+)
 from sqlalchemy.ext.declarative import declarative_base
 
 try:
@@ -104,30 +113,41 @@ Index(
     unique=True,
 )
 
+# Example:
+#  "files": [
+#   "lib/python3.9/site-packages/astroid-2.9.3.dist-info/INSTALLER",
+#   "lib/python3.9/site-packages/astroid-2.9.3.dist-info/LICENSE",
+#   "lib/python3.9/site-packages/astroid-2.9.3.dist-info/METADATA",
+#   "lib/python3.9/site-packages/astroid-2.9.3.dist-info/RECORD",
+#   "lib/python3.9/site-packages/astroid-2.9.3.dist-info/REQUESTED",
+#   "lib/python3.9/site-packages/astroid-2.9.3.dist-info/WHEEL",
+#   "lib/python3.9/site-packages/astroid-2.9.3.dist-info/direct_url.json",
+
 
 class Artifacts(Base):
     __tablename__ = "artifacts"
     name = Column(String, primary_key=True, index=True)
+    platform = Column(String)
+    build = Column(String)
     package_name = Column(String, ForeignKey("packages.name"))
-    platform = Column(String, primary_key=True)
     version = Column(String)
-    relational_id = Column(Integer, ForeignKey("relations_map_file_paths.id"))
 
+    # relational_id = Column(Integer, ForeignKey("relations_map_file_paths.id"))
     def __repr__(self):
-        return f"<Artifact(name={self.name}, platform={self.platform}, version={self.version})>"
+        return f"<Artifact(name={self.name})>"
 
 
 class ArtifactsFilePaths(Base):
     __tablename__ = "artifacts_file_paths"
-    id = Column(Integer, primary_key=True)
-    parent_id = Column(Integer)
-    dir = Column(String)
+    id = Column(UUID, primary_key=True)
+    path = Column(String)
 
 
 class RelationsMapFilePaths(Base):
     __tablename__ = "relations_map_file_paths"
-    id = Column(Integer, primary_key=True)
-    file_path = Column(String, ForeignKey("artifacts_file_paths.id"))
+    id = Column(Integer, FetchedValue(), primary_key=True, index=True)
+    file_path_id = Column(String, ForeignKey("artifacts_file_paths.id"))
+    artifact_name = Column(String, ForeignKey("artifacts.name"))
 
 
 if __name__ == "__main__":

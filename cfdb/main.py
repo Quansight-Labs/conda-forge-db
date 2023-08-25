@@ -1,66 +1,10 @@
 import typer
-from typer.core import TyperGroup
 from click import Context
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-from cfdb.models.schema import Base
-from cfdb.populate import artifacts, feedstock_outputs, import_to_package_maps
-from cfdb.log import logger
-from pathlib import Path
+from typer.core import TyperGroup
 
-
-class CFDBHandler:
-    """
-    CFDBHandler class handles the database operations for CFDB.
-
-    Args:
-        db_url (str): The URL of the database.
-
-    Attributes:
-        db_url (str): The URL of the database.
-        engine (Engine): SQLAlchemy Engine object.
-        Session (sessionmaker): SQLAlchemy sessionmaker object.
-
-    Methods:
-        update_feedstock_outputs: Update the feedstock outputs in the database.
-        update_artifacts: Update the artifacts in the database.
-    """
-
-    def __init__(self, db_url):
-        self.db_url = db_url
-        self.engine = create_engine(db_url)
-        Base.metadata.create_all(self.engine)
-        self.Session = sessionmaker(bind=self.engine)
-
-    def update_feedstock_outputs(self, path):
-        """
-        Update the feedstock outputs in the database.
-
-        Args:
-            path (str): Path to the feedstock outputs directory.
-        """
-        session = self.Session()
-        feedstock_outputs.update(session, path=Path(path))
-        session.commit()
-
-    def update_artifacts(self):
-        """
-        Update the artifacts in the database.
-        """
-        session = self.Session()
-        artifacts.update(session)
-        session.commit()
-
-    def update_import_to_package_maps(self, path):
-        """
-        Update the import to package maps in the database.
-
-        Args:
-            path (str): Path to the import to package maps directory.
-        """
-        session = self.Session()
-        import_to_package_maps.update(session, path=Path(path))
-        session.commit()
+from cfdb.handler import CFDBHandler
+from cfdb.harvest.core import reap as reap_artifacts
+from cfdb.log import initialize_logging
 
 
 class OrderCommands(TyperGroup):
@@ -93,7 +37,7 @@ def update_feedstock_outputs(
         To update the feedstock outputs, use the following command:
         $ cfdb update_feedstock_outputs --path /path/to/feedstock-outputs/outputs
     """
-    db_handler = CFDBHandler("sqlite:///cf-database.db")
+    db_handler = CFDBHandler()
     db_handler.update_feedstock_outputs(path)
 
 
@@ -113,18 +57,39 @@ def update_import_to_package_maps(
         To update the import to package maps, use the following command:
         $ cfdb update_import_to_package_maps --path /path/to/libcfgraph/import_to_package_maps
     """
-    db_handler = CFDBHandler("sqlite:///cf-database.db")
+    db_handler = CFDBHandler()
     db_handler.update_import_to_package_maps(path)
 
 
 @app.command()
-def update_artifacts():
+def update_artifacts(
+    path: str = typer.Option(
+        ..., "--path", "-p", help="Path to the artifacts directory."
+    )
+):
     """
     Update the artifacts in the database.
     """
-    db_handler = CFDBHandler("sqlite:///cf-database.db")
-    db_handler.update_artifacts()
+    db_handler = CFDBHandler()
+    db_handler.update_artifacts(path)
+
+
+@app.command()
+def harvest_packages_and_artifacts(
+    path: str = typer.Option(
+        ..., "--path", "-p", help="Path to the artifacts directory or Database URL."
+    )
+):
+    """
+    Harvest the packages and artifacts from the artifacts directory.
+    """
+    reap_artifacts(path)
+
+
+def _main():
+    initialize_logging()
+    app()
 
 
 if __name__ == "__main__":
-    app()
+    _main()

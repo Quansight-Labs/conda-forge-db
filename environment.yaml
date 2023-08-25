@@ -10,5 +10,9 @@ dependencies:
   - click
   - rich
   - typer
+  - requests_cache
   - pip:
       - eralchemy2
+      - ruamel.yaml
+      - xonsh
+      - conda_package_streaming

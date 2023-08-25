@@ -2,6 +2,19 @@ name: Create & Update DB
 
 on: [pull_request, workflow_dispatch]
 
+env:
+  CFDB_ARTIFACTS_PATH: ${{ github.workspace }}/harvested_artifacts
+  CFDB_DB_PATH: ${{ github.workspace }}/cf-database.db
+
+concurrency:
+  # Concurrency group that uses the workflow name and PR number if available
+  # or commit SHA as a fallback. If a new build is triggered under that
+  # concurrency group while a previous build is running it will be canceled.
+  # Repeated pushes to a PR will cancel all previous builds, while multiple
+  # merges to main will not cancel.
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: true
+
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
@@ -12,16 +25,16 @@ jobs:
     steps:
     - name: Checkout repository
       uses: actions/checkout@v3
+      with:
+        path: cfdb
 
     - name: Clone Feedstock Outputs
-      if: always()
       uses: actions/checkout@v3
       with:
         repository: conda-forge/feedstock-outputs
         path: feedstock-outputs
 
     - name: Clone Artifacts (import_to_package_maps -- sparse)
-      if: always()
       uses: actions/checkout@v3
       with:
         repository: regro/libcfgraph
@@ -31,49 +44,73 @@ jobs:
 
     - name: Verify cloned repos
       run: |
-        ls -lat
+        ls -lat ${{ github.workspace }}/cfdb
         ls -lat ${{ github.workspace }}/feedstock-outputs
         ls -lat ${{ github.workspace }}/libcfgraph
 
-
     - name: Build environment
-      uses: ./.github/actions/build-conda-env
+      uses: ./cfdb/.github/actions/build-conda-env
       with:
-        env_file: environment.yaml
+        env_file: ${{ github.workspace }}/cfdb/environment.yaml
 
-    - name: Activate environment & check conda info
+    - name: Install cfdb
       run: |
-        conda activate $(grep name environment.yaml | awk '{ print $2}')
-        conda info
-        echo "Install cfdb"
-        pip install -e .
+        pip install -e ${{ github.workspace }}/cfdb
 
     - name: Retrieve previous DB table from artifacts
-      uses: actions/download-artifact@v2
+      uses: actions/download-artifact@v3
+      id: download
+      continue-on-error: true
       with:
         name: cfdb
-        path: ${{ github.workspace }}/cf-database.db
 
-    - name: Create runtest directory
-      if: always()
+    # Add an extra step to decompress the tar file back to the original location
+    - name: Decompress DB file
+      # Only run if the artifact download was successful
+      if: steps.download.outcome == 'success'
       run: |
-        mkdir database
-        cd database
+        tar -xf ${{ steps.download.outputs.download-path }} -C ${{ github.workspace }}
+        ls -lat
+        echo "Decompressed DB file" $(du -sh ${{ github.workspace }}/cf-database.db)
 
-    - name: Populate table
-      if: always()
+    - name: Test cfdb
+      working-directory: ${{ github.workspace }}/cfdb
       run: |
-        cd ..
-        echo $(pwd)
+          echo "Test cfdb installation :::::" $(pwd)
+          cfdb --help
+          ls -lat .
+
+    - name: Populate table of feedstock outputs and import to package maps
+      run: |
         echo "Update feedstock outputs"
-        cfdb update-feedstock-outputs -p ${{ github.workspace }}/feedstock-outputs
+        cfdb update-feedstock-outputs --path ${{ github.workspace }}/feedstock-outputs
         echo "Update import Packages to maps"
         cfdb update-import-to-package-maps --path ${{ github.workspace }}/libcfgraph/import_to_pkg_maps
+        du -sh $CFDB_DB_PATH
         ls -lat
 
+    - name: Harvest Artifacts
+      run: |
+        echo "Harvest Artifacts from upstream"
+        cfdb harvest-packages-and-artifacts --path $CFDB_DB_PATH
+        du -sh $CFDB_ARTIFACTS_PATH
+        ls -lat
+
+    - name: Populate artifact and files tables
+      run: |
+        echo "Populate artifact and files tables"
+        cfdb update-artifacts --path $CFDB_ARTIFACTS_PATH
+        du -sh $CFDB_DB_PATH
+        ls -lat
+
+    # Add the compression step using tar and Zstd
+    - name: Compress DB file
+      run: |
+        ZSTD_NBTHREADS=4 ZSTD_CLEVEL=19 tar --zstd -cf ${{ github.workspace }}/cf-database.db.tar.zstd $CFDB_DB_PATH
+        echo "Compressed DB file" $(du -sh ${{ github.workspace }}/cf-database.db.tar.zstd)
+
     - name: 'Upload Artifact'
-      if: always()
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       with:
         name: cfdb
-        path: ${{ github.workspace }}/cf-database.db
+        path: ${{ github.workspace }}/cf-database.db.tar.zstd

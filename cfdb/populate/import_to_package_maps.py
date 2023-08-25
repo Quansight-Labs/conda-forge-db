@@ -1,18 +1,20 @@
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from typing import List, Set, Tuple
-
+from logging import getLogger
 from sqlalchemy.orm import Session
 
-from cfdb.log import logger, progressBar
+from cfdb.log import progressBar
 from cfdb.models.schema import ImportToPackageMaps, Packages, uniq_id
 from cfdb.populate.utils import traverse_files, retrieve_import_maps_from_output_blob
+
+logger = getLogger(__name__)
 
 
 def _decompose_filename(filename_handle: str):
     try:
         package_name, partition = filename_handle.split(".")
-    except ValueError as e:
+    except ValueError:
         # We assume that typeerror will only happen when filename
         # is likely name.. (with the extra dot)
         package_name = filename_handle

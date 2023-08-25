@@ -23,7 +23,7 @@ classifiers = [
 ]
 
 [project.scripts]
-cfdb = "cfdb.__main__:main"
+cfdb = "cfdb.main:_main"
 
 [tool.setuptools]
 py-modules = ['cfdb']
